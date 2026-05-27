@@ -1,0 +1,54 @@
+name: Build macOS DMG
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' # Best compatibility for tkinter and pyinstaller
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+
+    - name: Build macOS App with PyInstaller
+      run: |
+        # Using --windowed to ensure it's a GUI app without a terminal window
+        pyinstaller --noconsole --windowed --name "iMessageBot" app.py
+
+    - name: Install create-dmg
+      run: brew install create-dmg
+
+    - name: Create DMG file
+      run: |
+        cd dist
+        # Create a DMG from the built .app file
+        create-dmg \
+          --volname "iMessageBot Installer" \
+          --window-pos 200 120 \
+          --window-size 600 400 \
+          --icon-size 100 \
+          --icon "iMessageBot.app" 175 120 \
+          --hide-extension "iMessageBot.app" \
+          --app-drop-link 425 120 \
+          "iMessageBot.dmg" \
+          "iMessageBot.app"
+
+    - name: Upload DMG Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: iMessageBot-macOS-DMG
+        path: dist/iMessageBot.dmg
+        retention-days: 7
